@@ -7,6 +7,25 @@
 require_once __DIR__ . '/src/app.php';
 require_once __DIR__ . '/src/api.php';
 
+// Turn an uncaught error into a readable 500 instead of Apache's blank one. Full
+// details (file, line, trace) go to the PHP error log; the page shows the message.
+set_exception_handler(function ($ex) {
+    error_log('opponent-api: ' . $ex);
+    $msg = $ex->getMessage();
+    if (preg_match('/unable to open database file|readonly database/i', $msg)) {
+        $msg .= "\n\nThe web server user needs write access to database/ and the .sqlite file in it"
+              . " (SQLite creates -wal/-shm files alongside it, even for reads).";
+    } elseif (stripos($msg, 'no such table') !== false) {
+        $msg .= "\n\nThe database has no schema. Run:  php bin/init_db.php";
+    }
+    if (!headers_sent()) {
+        http_response_code(500);
+        header('Content-Type: text/plain; charset=utf-8');
+        header('Cache-Control: no-store');
+    }
+    echo 'Server error: ' . $msg . "\n";
+});
+
 // Local dev: serve real files (logos) ourselves. The built-in server can't do it via
 // `return false` because the URL carries base_path, which isn't a directory on disk.
 if (PHP_SAPI === 'cli-server') {
@@ -28,6 +47,17 @@ if (!is_file(config()['db_path'])) {
 
 $path = request_path();
 $post = is_post();
+
+/* Everything under /admin needs an SSO user; .htaccess decides which ones. */
+if ($path === '/admin' || strpos($path, '/admin/') === 0) {
+    require_admin();
+    if ($post && !same_origin_request()) {
+        http_response_code(403);
+        header('Content-Type: text/plain');
+        echo "Refused: this form was not submitted from this site.\n";
+        exit;
+    }
+}
 
 /* ---- Admin UI + docs (everything under /admin, plus /docs) -------------- */
 if ($path === '/docs') {

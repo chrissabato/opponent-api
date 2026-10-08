@@ -6,6 +6,9 @@ return array(
 
     // URL path the app is served from, no trailing slash.
     // Production: athletics.willamette.edu/api/teams/
-    // Local dev (php -S localhost:8001 index.php): use '' instead.
+    // Local dev (php -S localhost:8001 index.php) works with the same value.
     'base_path' => '/api/teams',
+
+    // Local dev only: pretend to be this SSO user (honoured only by `php -S`, never under Apache).
+    // 'dev_user' => 'dev@localhost',
 );

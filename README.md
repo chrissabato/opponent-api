@@ -47,6 +47,17 @@ Consumer apps should store the team **slug**.
 
 ## Admin UI
 
+Protected by campus SSO. `.htaccess` has mod_shib require a login for `/api/teams/admin…`
+and lists who may get in on its `Require shib-user` line (space-separated `REMOTE_USER`
+values, e.g. `someone@willamette.edu`). To add an admin, edit that line. The API, logos
+and `/docs` stay public.
+
+To find someone's exact `REMOTE_USER`, temporarily change the line to
+`Require shib-session` (any campus login), have them sign in: their username appears in
+the page header. Then put the list back.
+
+Local dev has no Shibboleth: `dev_user` in `config.php` stands in, and only under `php -S`.
+
 | Path                 | Purpose                    |
 |----------------------|----------------------------|
 | `/api/teams/admin`   | Team list (CRUD)           |

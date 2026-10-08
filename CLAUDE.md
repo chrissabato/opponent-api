@@ -68,3 +68,14 @@ Plain PHP, no framework, PHP 7.2 baseline: no typed properties, arrow functions,
 - `logo.url` is `null` when the file isn't in `/logos/` (lookup is case-insensitive because
   the logo pack is authored on Windows). `/logos/` is git-ignored and deployed per server.
 - `PDOException` extends `RuntimeException` — catch it first.
+
+## Admin auth
+
+Campus SSO via the server's Shibboleth SP (entityID `https://athletics.willamette.edu/shibboleth`).
+`.htaccess` wraps `/api/teams/admin…` in `<If "%{THE_REQUEST} =~ ...">` with `AuthType shibboleth`
+and `Require shib-user <list>` — the admin allowlist lives there, not in the app. THE_REQUEST is
+used because the rewrite to `index.php` re-runs access checks with the new REQUEST_URI.
+The app adds two checks (`index.php`, helpers in `src/app.php`): `require_admin()` 403s `/admin`
+when no `REMOTE_USER`/`REDIRECT_REMOTE_USER` is present (fail-closed for URLs the .htaccess
+regex misses, e.g. `//admin`), and `same_origin_request()` rejects admin POSTs whose
+Origin/Referer isn't this host (CSRF). `dev_user` in config stands in for SSO under `php -S` only.

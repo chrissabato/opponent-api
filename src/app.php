@@ -91,6 +91,53 @@ function param($key, $default = '')
     return is_string($v) ? trim($v) : $v;
 }
 
+/* --------------------------------------------------------------------------
+ * Admin auth is campus SSO, enforced in .htaccess (mod_shib + Require shib-user).
+ * The app only fails closed when no SSO user reaches /admin.
+ * ------------------------------------------------------------------------ */
+
+/** Signed-in username, or '' when there is none. */
+function current_user()
+{
+    // After mod_rewrite's internal redirect to index.php Apache may expose it as REDIRECT_REMOTE_USER.
+    foreach (array('REMOTE_USER', 'REDIRECT_REMOTE_USER') as $k) {
+        if (!empty($_SERVER[$k])) {
+            return (string) $_SERVER[$k];
+        }
+    }
+    // Local dev has no Shibboleth; dev_user stands in, and only under the built-in server.
+    $cfg = config();
+    if (PHP_SAPI === 'cli-server' && !empty($cfg['dev_user'])) {
+        return (string) $cfg['dev_user'];
+    }
+    return '';
+}
+
+/**
+ * True when a POST came from one of this site's own pages, judged by the Origin
+ * header (or Referer when a browser omits Origin). Blocks cross-site form posts
+ * riding on an admin's SSO session.
+ */
+function same_origin_request()
+{
+    $src = !empty($_SERVER['HTTP_ORIGIN']) ? $_SERVER['HTTP_ORIGIN']
+         : (!empty($_SERVER['HTTP_REFERER']) ? $_SERVER['HTTP_REFERER'] : '');
+    $host = isset($_SERVER['HTTP_HOST']) ? strtolower($_SERVER['HTTP_HOST']) : '';
+    return $src !== '' && $host !== '' && strtolower((string) parse_url($src, PHP_URL_HOST)
+        . (parse_url($src, PHP_URL_PORT) ? ':' . parse_url($src, PHP_URL_PORT) : '')) === $host;
+}
+
+/** Stop with a 403 page unless an SSO user reached the app (which list is .htaccess's job). */
+function require_admin()
+{
+    if (current_user() !== '') {
+        return;
+    }
+    http_response_code(403);
+    view('auth/denied', array('title' => 'Not authorised'));
+    exit;
+}
+
 /** Render a view file inside the layout. */
 function view($name, array $data = array())
 {
@@ -220,7 +267,7 @@ function slugify($s)
     if ($s === '') {
         $s = 'team';
     }
-    if (ctype_digit($s)) {
+    if (preg_match('/^\d+$/', $s)) {
         $s = 'team-' . $s;
     }
     return $s;
@@ -237,7 +284,7 @@ function RESERVED_SLUGS()
 
 function slug_valid($s)
 {
-    return (bool) preg_match('/^[a-z0-9]+(?:-[a-z0-9]+)*$/', $s) && !ctype_digit($s)
+    return (bool) preg_match('/^[a-z0-9]+(?:-[a-z0-9]+)*$/', $s) && !preg_match('/^\d+$/', $s)
         && !in_array($s, RESERVED_SLUGS(), true);
 }
 
@@ -297,7 +344,7 @@ function team_find($id)
 /** Look a team up by numeric id or by slug. */
 function team_find_by_key($key)
 {
-    if (ctype_digit((string) $key)) {
+    if (preg_match('/^\d+$/', (string) $key)) {
         return team_find($key);
     }
     $stmt = db()->prepare('SELECT * FROM teams WHERE slug = ?');

@@ -23,7 +23,7 @@ if (!is_file(config()['db_path'])) {
     exit(1);
 }
 
-$vmix = new PDO('sqlite:' . $srcDb, null, null, array(PDO::SQLITE_ATTR_OPEN_FLAGS => PDO::SQLITE_OPEN_READONLY));
+$vmix = new PDO('sqlite:' . $srcDb); // only SELECTs; PDO::SQLITE_ATTR_OPEN_FLAGS (read-only) needs PHP 7.3+
 $vmix->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
 $vmix->setAttribute(PDO::ATTR_DEFAULT_FETCH_MODE, PDO::FETCH_ASSOC);
 
@@ -53,6 +53,10 @@ foreach ($vmix->query('SELECT * FROM teams ORDER BY id') as $row) {
     try {
         team_save(0, team_clean(0, $data));
         $added++;
+    } catch (PDOException $ex) { // a DB problem (permissions, schema) will hit every row - stop
+        db()->rollBack();
+        fwrite(STDERR, "Database error, nothing imported: {$ex->getMessage()}\n");
+        exit(1);
     } catch (RuntimeException $ex) {
         fwrite(STDERR, "  ! {$row['full_name']}: {$ex->getMessage()}\n");
     }

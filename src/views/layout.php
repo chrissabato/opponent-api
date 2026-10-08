@@ -15,6 +15,14 @@
       <a class="hover:text-white/80" href="<?= url('/admin') ?>">Teams</a>
       <a class="hover:text-white/80" href="<?= url('/docs') ?>">API</a>
     </nav>
+    <?php if (current_user() !== ''): ?>
+      <span class="ml-auto text-xs text-slate-400">
+        <?= e(current_user()) ?>
+        <?php if (PHP_SAPI !== 'cli-server'): ?>
+          &middot; <a class="hover:text-white" href="/Shibboleth.sso/Logout?return=<?= rawurlencode(base_url() . '/docs') ?>">Log out</a>
+        <?php endif ?>
+      </span>
+    <?php endif ?>
   </div>
 </header>
 <main class="max-w-6xl mx-auto px-4 py-6">

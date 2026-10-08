@@ -35,6 +35,9 @@ $pre = 'mt-2 rounded bg-slate-900 text-slate-100 text-xs p-3 overflow-x-auto';
       Store a team&rsquo;s <strong>slug</strong> in your app, not its name or id &mdash; names get edited, slugs are meant to stay put.
       Base URL: <code class="font-mono"><?= e($base) ?></code>
     </p>
+    <p class="mt-2 text-sm text-slate-600">
+      Source code: <a class="text-blue-600 hover:underline" href="https://github.com/chrissabato/opponent-api">github.com/chrissabato/opponent-api</a>
+    </p>
   </section>
 
   <section class="bg-white rounded-lg shadow-sm p-5">

@@ -1,0 +1,32 @@
+# Deployed at: athletics.willamette.edu/api/teams/
+# If that URL path ever changes, update BOTH RewriteBase below and
+# 'base_path' in config.php.
+
+<IfModule mod_rewrite.c>
+    RewriteEngine On
+    RewriteBase /api/teams/
+
+    # Block direct access to application internals.
+    RewriteRule ^(?:src|bin|database)(?:/|$)          - [F,L]
+    RewriteRule ^config(?:\.example)?\.php$           - [F,L]
+    RewriteRule \.(?:sqlite|sqlite-wal|sqlite-shm|md)$ - [F,L]
+
+    # Serve real static files (logos) directly.
+    RewriteCond %{REQUEST_FILENAME} -f
+    RewriteRule ^ - [L]
+
+    # Everything else goes through the front controller.
+    RewriteRule ^ index.php [L]
+</IfModule>
+
+# Logos are fetched cross-origin by the consumer apps (e.g. drawn onto a <canvas>).
+<IfModule mod_headers.c>
+    <FilesMatch "\.(png|jpe?g|gif|webp|svg)$">
+        Header set Access-Control-Allow-Origin "*"
+    </FilesMatch>
+</IfModule>
+
+# Belt-and-suspenders for hosts that honour <Files> but not the rules above.
+<FilesMatch "\.(sqlite|sqlite-wal|sqlite-shm|md)$">
+    Require all denied
+</FilesMatch>

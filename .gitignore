@@ -1,0 +1,7 @@
+/config.php
+/database/*.sqlite
+/database/*.sqlite-wal
+/database/*.sqlite-shm
+
+# Logo pack - deployed straight onto each server, not tracked here.
+/logos/

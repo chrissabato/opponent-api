@@ -12,11 +12,11 @@ $fields = array(
     'location'        => 'Location',
     'conference'      => 'Conference',
     'website'         => 'Website',
+    'website_provider' => 'Website provider',
     'primary_color'   => 'Primary colour',
     'secondary_color' => 'Secondary colour',
     'logo_bg_hex'     => 'Logo BG colour',
     'logo_filename'   => 'Logo filename',
-    'stats_provider'  => 'Stats provider',
     'stat_id'         => 'Stat ID',
 );
 $hints = array(

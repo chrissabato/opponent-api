@@ -44,10 +44,10 @@ foreach ($vmix->query('SELECT * FROM teams ORDER BY id') as $row) {
         'mascot'          => $row['mascot'],
         'location'        => $row['location'],
         'website'         => $row['website'],
+        'website_provider' => $row['stats_provider'],
         'primary_color'   => $row['logo_bg_hex'],
         'logo_bg_hex'     => $row['logo_bg_hex'],
         'logo_filename'   => $row['logo_filename'],
-        'stats_provider'  => $row['stats_provider'],
         'stat_id'         => $row['stat_id'],
     );
     try {

@@ -14,11 +14,11 @@ CREATE TABLE IF NOT EXISTS teams (
     location        TEXT NOT NULL DEFAULT '',
     conference      TEXT NOT NULL DEFAULT '',
     website         TEXT NOT NULL DEFAULT '',
+    website_provider TEXT NOT NULL DEFAULT '',         -- platform the website runs on
     primary_color   TEXT NOT NULL DEFAULT '',          -- "#RRGGBB" or ''
     secondary_color TEXT NOT NULL DEFAULT '',
     logo_bg_hex     TEXT NOT NULL DEFAULT '',          -- flat fill behind the logo (vMix -bkgd.png swatch)
     logo_filename   TEXT NOT NULL DEFAULT '',          -- file in /logos/
-    stats_provider  TEXT NOT NULL DEFAULT '',
     stat_id         TEXT NOT NULL DEFAULT '',
     created_at      TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,   -- UTC "YYYY-MM-DD HH:MM:SS"
     updated_at      TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP

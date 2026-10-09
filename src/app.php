@@ -317,9 +317,9 @@ function TEAM_FIELDS()
 {
     return array(
         'full_name', 'short_name', 'code', 'mascot', 'slug',
-        'location', 'conference', 'website',
+        'location', 'conference', 'website', 'website_provider',
         'primary_color', 'secondary_color', 'logo_bg_hex', 'logo_filename',
-        'stats_provider', 'stat_id',
+        'stat_id',
     );
 }
 

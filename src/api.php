@@ -24,6 +24,7 @@ function team_resource(array $t)
         'location'   => $t['location'],
         'conference' => $t['conference'],
         'website'    => $t['website'],
+        'website_provider' => $t['website_provider'],
         'colors'     => array(
             'primary'   => $t['primary_color'],
             'secondary' => $t['secondary_color'],
@@ -36,7 +37,6 @@ function team_resource(array $t)
             'bg_url'   => $bg !== '' ? base_url() . '/bg/' . $bg . '.png' : null,
         ),
         'stats'      => array(
-            'provider' => $t['stats_provider'],
             'id'       => $t['stat_id'],
         ),
         'updated_at' => iso_utc($t['updated_at']),
@@ -47,9 +47,9 @@ function team_resource(array $t)
 function team_csv_columns()
 {
     return array(
-        'id', 'slug', 'full_name', 'short_name', 'code', 'mascot', 'location', 'conference', 'website',
+        'id', 'slug', 'full_name', 'short_name', 'code', 'mascot', 'location', 'conference', 'website', 'website_provider',
         'primary_color', 'secondary_color', 'logo_bg_hex', 'logo_filename', 'logo_url', 'logo_bg_url',
-        'stats_provider', 'stat_id', 'updated_at',
+        'stat_id', 'updated_at',
     );
 }
 

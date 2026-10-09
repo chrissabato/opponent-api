@@ -7,7 +7,8 @@ PRAGMA foreign_keys = ON;
 CREATE TABLE IF NOT EXISTS teams (
     id              INTEGER PRIMARY KEY AUTOINCREMENT,
     slug            TEXT NOT NULL UNIQUE,              -- stable public identifier for consumer apps
-    full_name       TEXT NOT NULL UNIQUE,
+    full_name       TEXT NOT NULL,
+    variant         TEXT NOT NULL DEFAULT '',          -- e.g. Men / Women when a school has several entries
     short_name      TEXT NOT NULL DEFAULT '',
     code            TEXT NOT NULL DEFAULT '',
     mascot          TEXT NOT NULL DEFAULT '',
@@ -25,3 +26,4 @@ CREATE TABLE IF NOT EXISTS teams (
 );
 
 CREATE INDEX IF NOT EXISTS teams_updated_at ON teams (updated_at);
+CREATE UNIQUE INDEX IF NOT EXISTS teams_name_variant ON teams (full_name COLLATE NOCASE, variant COLLATE NOCASE);

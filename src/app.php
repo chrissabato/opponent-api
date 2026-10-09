@@ -316,7 +316,7 @@ function iso_utc($sqlTime)
 function TEAM_FIELDS()
 {
     return array(
-        'full_name', 'short_name', 'code', 'mascot', 'slug',
+        'full_name', 'variant', 'short_name', 'code', 'mascot', 'slug',
         'location', 'conference', 'website', 'website_provider',
         'primary_color', 'secondary_color', 'logo_bg_hex', 'logo_filename',
         'stat_id',
@@ -328,9 +328,28 @@ function COLOR_FIELDS()
     return array('primary_color', 'secondary_color', 'logo_bg_hex');
 }
 
+/** Sort order for team lists: by name, the plain entry before its variants. */
+function TEAM_ORDER()
+{
+    return 'full_name COLLATE NOCASE, variant COLLATE NOCASE';
+}
+
+/**
+ * Split a legacy "Name [Variant]" full name into array(name, variant).
+ * Used to migrate/import names that carried the variant in brackets.
+ */
+function split_variant($fullName)
+{
+    $fullName = trim((string) $fullName);
+    if (preg_match('/^(.*\S)\s*\[([^\]]+)\]$/', $fullName, $m)) {
+        return array($m[1], trim($m[2]));
+    }
+    return array($fullName, '');
+}
+
 function teams_all()
 {
-    return db()->query('SELECT * FROM teams ORDER BY full_name COLLATE NOCASE')->fetchAll();
+    return db()->query('SELECT * FROM teams ORDER BY ' . TEAM_ORDER())->fetchAll();
 }
 
 function team_find($id)
@@ -356,7 +375,7 @@ function team_find_by_key($key)
 /**
  * Validate + normalise submitted team fields. Returns the cleaned array; throws
  * RuntimeException with a user-facing message when something is wrong.
- * A blank slug is generated from full_name (only ever on create or when cleared,
+ * A blank slug is generated from full_name + variant (only ever on create or when cleared,
  * so renaming a team doesn't break consumer apps that stored its slug).
  */
 function team_clean($id, array $data)
@@ -377,7 +396,7 @@ function team_clean($id, array $data)
     }
     $out['slug'] = strtolower($out['slug']);
     if ($out['slug'] === '') {
-        $out['slug'] = slug_unique(slugify($out['full_name']), $id);
+        $out['slug'] = slug_unique(slugify(trim($out['full_name'] . ' ' . $out['variant'])), $id);
     } elseif (!slug_valid($out['slug'])) {
         throw new RuntimeException('Slug may only contain a-z, 0-9 and single hyphens, cannot be all digits, and cannot be one of: ' . implode(', ', RESERVED_SLUGS()) . '.');
     }

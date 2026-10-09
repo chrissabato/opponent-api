@@ -12,9 +12,10 @@ $endpoints = array(
     array(url('/bg/{hex}.png'), 'A 64&times;64 solid-colour PNG, e.g. ' . e(url('/bg/791716.png')) . '. Already linked from logo.bg_url.'),
 );
 $filters = array(
-    array('q', 'Case-insensitive substring of full name, short name, code or mascot.', 'q=lute'),
+    array('q', 'Case-insensitive substring of full name, variant, short name, code or mascot.', 'q=lute'),
     array('slug', 'Comma-separated list of slugs to fetch in one request.', 'slug=' . $exampleSlug . ',whitman-college'),
     array('conference', 'Exact conference name (case-insensitive).', 'conference=NWC'),
+    array('variant', 'For schools with several entries (e.g. Men / Women), return that variant; schools without it return their plain entry. Case-insensitive.', 'variant=women'),
     array('updated_since', 'Only teams changed at or after this time (ISO 8601, UTC). For incremental syncs.', 'updated_since=2026-10-01T00:00:00Z'),
 );
 $pre = 'mt-2 rounded bg-slate-900 text-slate-100 text-xs p-3 overflow-x-auto';
@@ -72,7 +73,8 @@ $pre = 'mt-2 rounded bg-slate-900 text-slate-100 text-xs p-3 overflow-x-auto';
   <section class="bg-white rounded-lg shadow-sm p-5">
     <h2 class="font-semibold">Team object</h2>
     <p class="mt-1 text-sm text-slate-600">
-      Unset text fields are <code>""</code>. Colours are <code>"#RRGGBB"</code> or <code>""</code>.
+      Unset text fields are <code>""</code>.
+      <code>variant</code> is <code>""</code> unless the school has several entries (e.g. <code>"Men"</code> / <code>"Women"</code>) &mdash; show it alongside <code>full_name</code> where it matters. Colours are <code>"#RRGGBB"</code> or <code>""</code>.
       <code>logo.url</code> is <code>null</code> when no logo file has been uploaded;
       <code>logo.bg_url</code> is <code>null</code> when no logo BG colour is set.
       New fields may be added over time; existing ones won&rsquo;t be renamed or removed.

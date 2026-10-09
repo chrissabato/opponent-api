@@ -55,13 +55,16 @@ Plain PHP, no framework, PHP 7.2 baseline: no typed properties, arrow functions,
 - **`team_resource()` is a public contract.** Consumer apps code against it. Adding fields is
   fine; renaming/removing fields or changing types is a breaking change. Keep `/docs`
   (`src/views/api/docs.php`) and README in sync when adding fields.
-- **Slugs are the stable ID** consumer apps store. Generated from `full_name` only when blank
+- **Slugs are the stable ID** consumer apps store. Generated from `full_name` + `variant` only when blank
   (create, or cleared by the user) — never regenerated on rename. Never all-digits, so
   `/{key}` can tell ids from slugs. Slugs share the URL space with app paths, so
   `RESERVED_SLUGS()` (admin, docs, bg, logos, ...) are rejected/skipped — extend it when adding
   a top-level route.
 - The list URL is documented with a trailing slash (`/api/teams/`): Apache's mod_dir 301 for
   the slashless form has no CORS header.
+- A school with several entries (different mascot/logo for men and women) is one row per
+  entry with the same `full_name` and a `variant` ("Men", "Women"); `full_name` + `variant`
+  is unique (case-insensitive). Don't put variants in brackets in the name.
 - Colours are stored normalised as `#RRGGBB` upper-case, or `''`.
 - `updated_at` is UTC (`CURRENT_TIMESTAMP`), bumped on every save; exposed as ISO 8601 `Z`.
   Deletes are hard deletes, so `updated_since` syncs don't see them.

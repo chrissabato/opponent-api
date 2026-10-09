@@ -18,6 +18,7 @@ function team_resource(array $t)
         'id'         => (int) $t['id'],
         'slug'       => $t['slug'],
         'full_name'  => $t['full_name'],
+        'variant'    => $t['variant'],
         'short_name' => $t['short_name'],
         'code'       => $t['code'],
         'mascot'     => $t['mascot'],
@@ -47,7 +48,7 @@ function team_resource(array $t)
 function team_csv_columns()
 {
     return array(
-        'id', 'slug', 'full_name', 'short_name', 'code', 'mascot', 'location', 'conference', 'website', 'website_provider',
+        'id', 'slug', 'full_name', 'variant', 'short_name', 'code', 'mascot', 'location', 'conference', 'website', 'website_provider',
         'primary_color', 'secondary_color', 'logo_bg_hex', 'logo_filename', 'logo_url', 'logo_bg_url',
         'stat_id', 'updated_at',
     );
@@ -58,6 +59,7 @@ function team_csv_columns()
  *   q=             substring of full/short name, code or mascot (case-insensitive)
  *   slug=a,b,c     only these slugs
  *   conference=    exact conference (case-insensitive)
+ *   variant=       per school, that variant if it has one, else its plain entry (case-insensitive)
  *   updated_since= ISO 8601 / any strtotime() date; teams changed at or after it
  * Throws InvalidArgumentException on a bad filter value.
  */
@@ -70,7 +72,7 @@ function api_query_teams()
     if ($q !== '') {
         // One placeholder per column: reusing a named placeholder isn't portable across PDO setups.
         $like = array();
-        foreach (array('full_name', 'short_name', 'code', 'mascot') as $i => $col) {
+        foreach (array('full_name', 'variant', 'short_name', 'code', 'mascot') as $i => $col) {
             $like[] = "$col LIKE :q$i ESCAPE '\\'";
             $args[':q' . $i] = '%' . str_replace(array('\\', '%', '_'), array('\\\\', '\\%', '\\_'), $q) . '%';
         }
@@ -93,6 +95,14 @@ function api_query_teams()
         $args[':conf'] = $conf;
     }
 
+    $variant = param('variant');
+    if ($variant !== '') {
+        $where[] = "(variant = :v1 COLLATE NOCASE OR (variant = '' AND NOT EXISTS ("
+                 . 'SELECT 1 FROM teams v WHERE v.full_name = teams.full_name COLLATE NOCASE AND v.variant = :v2 COLLATE NOCASE)))';
+        $args[':v1'] = $variant;
+        $args[':v2'] = $variant;
+    }
+
     $since = param('updated_since');
     if ($since !== '') {
         $ts = strtotime($since);
@@ -104,7 +114,7 @@ function api_query_teams()
     }
 
     $sql = 'SELECT * FROM teams' . ($where ? ' WHERE ' . implode(' AND ', $where) : '')
-         . ' ORDER BY full_name COLLATE NOCASE';
+         . ' ORDER BY ' . TEAM_ORDER();
     $stmt = db()->prepare($sql);
     $stmt->execute($args);
     return $stmt->fetchAll();

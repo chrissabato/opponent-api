@@ -33,7 +33,7 @@ php -S localhost:8001 index.php      # then open http://localhost:8001/api/teams
 
 | Path                          | Purpose                                              |
 |-------------------------------|------------------------------------------------------|
-| `/api/teams/`                 | All teams (JSON). Filters: `q`, `slug`, `conference`, `updated_since` |
+| `/api/teams/`                 | All teams (JSON). Filters: `q`, `slug`, `conference`, `variant`, `updated_since` |
 | `/api/teams/{slug\|id}`        | One team (JSON)                                      |
 | `/api/teams/export.csv`       | All teams, flat CSV (same filters)                   |
 | `/api/teams/bg/{hex}.png`     | 64×64 solid-colour PNG                               |

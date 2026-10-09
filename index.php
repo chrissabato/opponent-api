@@ -99,7 +99,7 @@ if ($post && preg_match('#^/admin(?:/(\d+))?$#', $path, $m)) {
         }
         team_save($id, $clean);
     } catch (PDOException $ex) { // before RuntimeException, which it extends
-        $error = 'Could not save. Full name and slug must both be unique.';
+        $error = 'Could not save. Full name + variant and slug must both be unique.';
     } catch (RuntimeException $ex) {
         $error = $ex->getMessage();
     }

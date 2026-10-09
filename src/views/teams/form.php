@@ -5,6 +5,7 @@ $id = $team && isset($team['id']) ? (int) $team['id'] : 0;
 $action = $id ? url('/admin/' . $id) : url('/admin');
 $fields = array(
     'full_name'       => 'Full name',
+    'variant'         => 'Variant',
     'short_name'      => 'Short name',
     'code'            => 'Code',
     'mascot'          => 'Mascot',
@@ -20,6 +21,7 @@ $fields = array(
     'stat_id'         => 'Stat ID',
 );
 $hints = array(
+    'variant'         => 'Only when a school has more than one entry (e.g. Men / Women, different mascot or logo). Blank otherwise.',
     'slug'            => 'Stable ID other apps store. Leave blank to generate from the full name. Changing it breaks apps that saved the old one.',
     'primary_color'   => 'Main brand colour.',
     'secondary_color' => 'Accent colour.',

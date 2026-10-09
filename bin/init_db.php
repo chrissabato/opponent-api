@@ -39,6 +39,40 @@ if (in_array('stats_provider', $cols, true) && !in_array('website_provider', $co
     echo "Renamed stats_provider to website_provider.\n";
 }
 
+// Migration: variants ("Cal Lutheran University [Men]") moved out of full_name into their own
+// column, and full_name alone is no longer UNIQUE. SQLite can't drop a column constraint, so
+// rebuild the table (keeping ids, slugs and timestamps) under the new schema.
+$cols = array_column(db()->query('PRAGMA table_info(teams)')->fetchAll(), 'name');
+$migrateVariant = $cols && !in_array('variant', $cols, true);
+if ($migrateVariant) {
+    db()->beginTransaction();
+    db()->exec('ALTER TABLE teams RENAME TO teams_old');
+    db()->exec('DROP INDEX IF EXISTS teams_updated_at'); // moved with teams_old; schema.sql recreates it
+}
+
 db()->exec(file_get_contents(APP_ROOT . '/database/schema.sql'));
+
+if ($migrateVariant) {
+    $newCols = array_column(db()->query('PRAGMA table_info(teams)')->fetchAll(), 'name');
+    $keep = array_values(array_intersect($newCols, $cols)); // drops leftovers like stats_provider
+    $keep[] = 'variant';
+    $insert = db()->prepare('INSERT INTO teams (' . implode(', ', $keep) . ') VALUES (:' . implode(', :', $keep) . ')');
+    $moved = 0;
+    foreach (db()->query('SELECT * FROM teams_old ORDER BY id')->fetchAll() as $row) {
+        list($row['full_name'], $row['variant']) = split_variant($row['full_name']);
+        if ($row['variant'] !== '') { // full_name changed: bump so updated_since syncs pick it up
+            $row['updated_at'] = gmdate('Y-m-d H:i:s');
+            $moved++;
+        }
+        $values = array();
+        foreach ($keep as $c) {
+            $values[':' . $c] = $row[$c];
+        }
+        $insert->execute($values);
+    }
+    db()->exec('DROP TABLE teams_old');
+    db()->commit();
+    echo "Added variant column; moved $moved bracketed name(s) into it.\n";
+}
 $count = (int) db()->query('SELECT COUNT(*) FROM teams')->fetchColumn();
 echo "Schema applied. $count teams.\nDone: $dbPath\n";

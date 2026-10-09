@@ -17,7 +17,7 @@
     </thead>
     <tbody class="divide-y">
     <?php foreach ($teams as $t): ?>
-      <?php $haystack = strtolower($t['full_name'] . ' ' . $t['short_name'] . ' ' . $t['code'] . ' ' . $t['mascot'] . ' ' . $t['slug']); ?>
+      <?php $haystack = strtolower($t['full_name'] . ' ' . $t['variant'] . ' ' . $t['short_name'] . ' ' . $t['code'] . ' ' . $t['mascot'] . ' ' . $t['slug']); ?>
       <tr class="hover:bg-slate-50" data-team-row="<?= e($haystack) ?>">
         <td class="px-3 py-2">
           <?php $logoSrc = logo_asset_url($t['logo_filename']); ?>
@@ -30,7 +30,12 @@
             <span class="font-mono text-xs text-slate-400"><?= e($t['logo_filename']) ?></span>
           <?php endif ?>
         </td>
-        <td class="px-3 py-2 font-medium"><?= e($t['full_name']) ?></td>
+        <td class="px-3 py-2 font-medium">
+          <?= e($t['full_name']) ?>
+          <?php if ($t['variant'] !== ''): ?>
+            <span class="ml-1 rounded bg-slate-100 px-1.5 py-0.5 text-xs font-normal text-slate-600"><?= e($t['variant']) ?></span>
+          <?php endif ?>
+        </td>
         <td class="px-3 py-2"><?= e($t['short_name']) ?></td>
         <td class="px-3 py-2"><?= e($t['code']) ?></td>
         <td class="px-3 py-2"><?= e($t['mascot']) ?></td>
@@ -49,7 +54,7 @@
           <a href="<?= url('/admin/' . $t['id'] . '/edit') ?>" class="text-blue-600 hover:underline">Edit</a>
           <a href="<?= url('/' . $t['slug']) ?>" class="ml-2 text-slate-500 hover:underline">JSON</a>
           <form method="post" action="<?= url('/admin/' . $t['id'] . '/delete') ?>" class="inline"
-                onsubmit="return confirm('Delete <?= e(addslashes($t['full_name'])) ?>? Apps referencing its slug will get a 404.')">
+                onsubmit="return confirm('Delete <?= e(addslashes(trim($t['full_name'] . ' ' . $t['variant']))) ?>? Apps referencing its slug will get a 404.')">
             <button class="ml-2 text-red-600 hover:underline">Delete</button>
           </form>
         </td>

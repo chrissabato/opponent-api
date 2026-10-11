@@ -119,6 +119,15 @@ if ($post && preg_match('#^/admin/(\d+)/delete$#', $path, $m)) {
     redirect('/admin');
 }
 
+/* POST-only URLs reached by GET -- typically an expired SSO session: Shibboleth sends the
+   POST through the IdP and comes back with a GET, dropping the form. Never act on a GET. */
+if (preg_match('#^/admin/(\d+)/delete$#', $path)) {
+    redirect('/admin');
+}
+if (preg_match('#^/admin/(\d+)$#', $path, $m)) {
+    redirect('/admin/' . $m[1] . '/edit');
+}
+
 if ($path === '/admin' || strpos($path, '/admin/') === 0) {
     http_response_code(404);
     header('Content-Type: text/plain');

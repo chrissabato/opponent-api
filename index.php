@@ -48,24 +48,43 @@ if (!is_file(config()['db_path'])) {
 $path = request_path();
 $post = is_post();
 
-/* Everything under /admin needs an SSO user; .htaccess decides which ones. */
-if ($path === '/admin' || strpos($path, '/admin/') === 0) {
-    require_admin();
-    if ($post && !same_origin_request()) {
-        http_response_code(403);
-        header('Content-Type: text/plain');
-        echo "Refused: this form was not submitted from this site.\n";
-        exit;
+$isAdmin = $path === '/admin' || strpos($path, '/admin/') === 0;
+if ($isAdmin && $post && !same_origin_request()) {
+    http_response_code(403);
+    header('Content-Type: text/plain');
+    echo "Refused: this form was not submitted from this site.\n";
+    exit;
+}
+
+/* Built-in login (auth = 'password'). The only /admin URLs open to signed-out visitors. */
+if ($path === '/admin/login' && auth_mode() === 'password') {
+    $error = null;
+    if ($post) {
+        if (admin_login(param('username'), isset($_POST['password']) ? (string) $_POST['password'] : '')) {
+            redirect('/admin');
+        }
+        $error = 'Wrong username or password.';
+        http_response_code(401);
+    } elseif (current_user() !== '') {
+        redirect('/admin');
     }
+    view('auth/login', array('title' => 'Log in', 'error' => $error, 'noAdmins' => !admin_users()));
+    exit;
+}
+if ($path === '/admin/logout' && $post && auth_mode() === 'password') {
+    admin_logout();
+    redirect('/docs');
+}
+
+/* Everything else under /admin needs a signed-in admin. */
+if ($isAdmin) {
+    require_admin();
 }
 
 /* ---- Admin UI + docs (everything under /admin, plus /docs) -------------- */
 if ($path === '/docs') {
-    $sample = team_find_by_key('willamette-university');
-    if (!$sample) {
-        $all = teams_all();
-        $sample = $all ? $all[0] : null;
-    }
+    $all = teams_all();
+    $sample = $all ? $all[0] : null;
     view('api/docs', array('title' => 'API', 'sample' => $sample));
     exit;
 }
@@ -119,8 +138,8 @@ if ($post && preg_match('#^/admin/(\d+)/delete$#', $path, $m)) {
     redirect('/admin');
 }
 
-/* POST-only URLs reached by GET -- typically an expired SSO session: Shibboleth sends the
-   POST through the IdP and comes back with a GET, dropping the form. Never act on a GET. */
+/* POST-only URLs reached by GET -- e.g. an expired SSO session: Shibboleth sends the POST
+   through the IdP and comes back with a GET, dropping the form. Never act on a GET. */
 if (preg_match('#^/admin/(\d+)/delete$#', $path)) {
     redirect('/admin');
 }

@@ -15,22 +15,27 @@ and initially populated from it via `bin/import_vmix.php`.
 php bin/init_db.php               # create database/teams.sqlite / apply schema (idempotent)
 php bin/init_db.php --force       # wipe and recreate empty
 php bin/import_vmix.php [path]    # import teams + logos from vmix-config (default ../vmix-config); skips existing full_names
+php bin/add_admin.php <user>      # print an admin_users line (password hash) for config.php
 php -S localhost:8001 index.php   # local dev server -> http://localhost:8001/api/teams/admin
 ```
 
-There is no build step, no Composer, no test suite. `config.php` is the local (git-ignored)
-config; `config.example.php` holds the production values.
+There is no build step, no Composer, no test suite. `config.php` and `.htaccess` are
+per-deployment and git-ignored; `config.example.php` and `.htaccess.example` are the
+templates. The repo is public: keep real admin usernames and password hashes out of
+tracked files.
 
 ## Deployment
 
-Flat drop-in at `athletics.willamette.edu/api/teams/` — no vhost. `.htaccess`
-rewrites non-file requests to `index.php`, blocks `src/`, `bin/`, `database/`, `config*.php`,
-`*.sqlite*`, `*.md`, and (mod_headers) adds `Access-Control-Allow-Origin: *` to logo images.
+Flat drop-in directory (ours: `athletics.willamette.edu/api/teams/`, `auth` = `shibboleth`).
+`.htaccess` rewrites non-file requests to `index.php`, blocks `src/`, `bin/`, `database/`,
+`config*.php`, `*.sqlite*`, `*.md`, and (mod_headers) adds `Access-Control-Allow-Origin: *`
+to logo images.
 
-The URL prefix lives in **two** places that must agree: `RewriteBase` in `.htaccess` and
-`base_path` in `config.php` (`/api/teams`, no trailing slash). Local dev uses the same
-`base_path`; the `cli-server` block in `index.php` serves `/logos/` itself because the
-built-in server can't map base_path-prefixed URLs to files.
+`base_path()` is `config['base_path']` when set, else `dirname(SCRIPT_NAME)` under a web
+server, else `''` (`php -S`, CLI). Behind an Alias, set both `base_path` and `RewriteBase`.
+Our local `config.php` sets `base_path` = `/api/teams` to mirror production; the `cli-server`
+block in `index.php` serves `/logos/` itself because the built-in server can't map
+base_path-prefixed URLs to files.
 
 ## Architecture
 
@@ -74,11 +79,17 @@ Plain PHP, no framework, PHP 7.2 baseline: no typed properties, arrow functions,
 
 ## Admin auth
 
-Campus SSO via the server's Shibboleth SP (entityID `https://athletics.willamette.edu/shibboleth`).
-`.htaccess` wraps `/api/teams/admin…` in `<If "%{THE_REQUEST} =~ ...">` with `AuthType shibboleth`
-and `Require shib-user <list>` — the admin allowlist lives there, not in the app. THE_REQUEST is
-used because the rewrite to `index.php` re-runs access checks with the new REQUEST_URI.
-The app adds two checks (`index.php`, helpers in `src/app.php`): `require_admin()` 403s `/admin`
-when no `REMOTE_USER`/`REDIRECT_REMOTE_USER` is present (fail-closed for URLs the .htaccess
-regex misses, e.g. `//admin`), and `same_origin_request()` rejects admin POSTs whose
-Origin/Referer isn't this host (CSRF). `dev_user` in config stands in for SSO under `php -S` only.
+`config['auth']`: `password` (default) or `shibboleth`. Helpers in `src/app.php`.
+
+- **password**: session login at `/admin/login` (POST), logout POST `/admin/logout`. Accounts
+  are `admin_users` (username => `password_hash`), made with `bin/add_admin.php`. Session
+  cookie `teamdata_admin`, scoped to base_path; `current_user()` doesn't start a session unless
+  that cookie exists, so public pages set no cookie. A user removed from config is logged out.
+- **shibboleth**: the commented `<If "%{THE_REQUEST} =~ ...">` block in `.htaccess.example`
+  makes mod_shib require a login on any `/admin` URL (THE_REQUEST because the rewrite to
+  `index.php` re-runs access checks with the new REQUEST_URI). The app checks
+  `REMOTE_USER`/`REDIRECT_REMOTE_USER` against `shib_admins` (case-insensitive); empty = nobody.
+
+Both: `require_admin()` guards every `/admin` URL except login/logout (fail-closed),
+`same_origin_request()` rejects admin POSTs (login included) whose Origin/Referer isn't this
+host (CSRF). `dev_user` in config bypasses login under `php -S` only.

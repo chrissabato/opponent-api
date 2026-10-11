@@ -36,10 +36,31 @@ function e($s)
     return htmlspecialchars((string) $s, ENT_QUOTES, 'UTF-8');
 }
 
+/**
+ * URL path the app is served from, no trailing slash ('' at the web root). config
+ * 'base_path' when set; otherwise the directory index.php sits in (Apache), or '' (php -S).
+ */
+function base_path()
+{
+    static $base = null;
+    if ($base === null) {
+        $cfg = config();
+        if (isset($cfg['base_path'])) {
+            $base = (string) $cfg['base_path'];
+        } elseif (PHP_SAPI !== 'cli-server' && PHP_SAPI !== 'cli' && !empty($_SERVER['SCRIPT_NAME'])) {
+            $base = str_replace('\\', '/', dirname($_SERVER['SCRIPT_NAME']));
+        } else {
+            $base = '';
+        }
+        $base = rtrim($base, '/');
+    }
+    return $base;
+}
+
 /** URL for an app path, honouring base_path. */
 function url($path = '')
 {
-    $base = rtrim(config()['base_path'], '/');
+    $base = base_path();
     if ($path === '' || $path === '/') {
         return $base === '' ? '/' : $base;
     }
@@ -60,7 +81,7 @@ function base_url()
         $proto = 'https';
     }
     $host = isset($_SERVER['HTTP_HOST']) ? $_SERVER['HTTP_HOST'] : 'localhost';
-    return $proto . '://' . $host . rtrim(config()['base_path'], '/');
+    return $proto . '://' . $host . base_path();
 }
 
 function redirect($path)
@@ -72,7 +93,7 @@ function redirect($path)
 function request_path()
 {
     $uri = parse_url($_SERVER['REQUEST_URI'], PHP_URL_PATH);
-    $base = rtrim(config()['base_path'], '/');
+    $base = base_path();
     if ($base !== '' && strpos($uri, $base) === 0) {
         $uri = substr($uri, strlen($base));
     }
@@ -92,31 +113,99 @@ function param($key, $default = '')
 }
 
 /* --------------------------------------------------------------------------
- * Admin auth is campus SSO, enforced in .htaccess (mod_shib + Require shib-user).
- * The app only fails closed when no SSO user reaches /admin.
+ * Admin auth. config 'auth' picks the mode:
+ *   'password'   (default) built-in login form; accounts in 'admin_users' (bin/add_admin.php).
+ *   'shibboleth' the web server's SSO sets REMOTE_USER (.htaccess); 'shib_admins' lists who
+ *                may in. Either way the app fails closed when no allowed user is present.
  * ------------------------------------------------------------------------ */
 
-/** Signed-in username, or '' when there is none. */
+function auth_mode()
+{
+    $cfg = config();
+    return isset($cfg['auth']) && $cfg['auth'] === 'shibboleth' ? 'shibboleth' : 'password';
+}
+
+/** Start the admin session (password mode). Cookie scoped to base_path, HttpOnly, SameSite=Lax. */
+function admin_session_start()
+{
+    if (session_status() === PHP_SESSION_ACTIVE) {
+        return;
+    }
+    $path = url('/');
+    $secure = strpos(base_url(), 'https://') === 0;
+    session_name('teamdata_admin');
+    if (PHP_VERSION_ID >= 70300) {
+        session_set_cookie_params(array(
+            'path' => $path, 'secure' => $secure, 'httponly' => true, 'samesite' => 'Lax',
+        ));
+    } else { // 7.2 has no samesite option; it rides along in the path attribute
+        session_set_cookie_params(0, $path . '; samesite=Lax', '', $secure, true);
+    }
+    session_start();
+}
+
+/** Signed-in admin's username, or '' when there is none (or they are not allowed). */
 function current_user()
 {
-    // After mod_rewrite's internal redirect to index.php Apache may expose it as REDIRECT_REMOTE_USER.
-    foreach (array('REMOTE_USER', 'REDIRECT_REMOTE_USER') as $k) {
-        if (!empty($_SERVER[$k])) {
-            return (string) $_SERVER[$k];
-        }
-    }
-    // Local dev has no Shibboleth; dev_user stands in, and only under the built-in server.
     $cfg = config();
+    // Local dev: dev_user stands in for a login, and only under the built-in server.
     if (PHP_SAPI === 'cli-server' && !empty($cfg['dev_user'])) {
         return (string) $cfg['dev_user'];
     }
-    return '';
+    if (auth_mode() === 'shibboleth') {
+        // After mod_rewrite's internal redirect to index.php Apache may expose it as REDIRECT_REMOTE_USER.
+        foreach (array('REMOTE_USER', 'REDIRECT_REMOTE_USER') as $k) {
+            if (!empty($_SERVER[$k])) {
+                $user = (string) $_SERVER[$k];
+                $allowed = isset($cfg['shib_admins']) ? (array) $cfg['shib_admins'] : array();
+                return in_array(strtolower($user), array_map('strtolower', $allowed), true) ? $user : '';
+            }
+        }
+        return '';
+    }
+    if (session_status() !== PHP_SESSION_ACTIVE && !isset($_COOKIE['teamdata_admin'])) {
+        return ''; // don't start a session (and set a cookie) for visitors who never logged in
+    }
+    admin_session_start();
+    $user = isset($_SESSION['user']) ? (string) $_SESSION['user'] : '';
+    $users = admin_users();
+    return $user !== '' && isset($users[$user]) ? $user : ''; // removed from config = logged out
+}
+
+/** username => password hash, from config 'admin_users'. */
+function admin_users()
+{
+    $cfg = config();
+    return isset($cfg['admin_users']) && is_array($cfg['admin_users']) ? $cfg['admin_users'] : array();
+}
+
+/** Check a username/password against admin_users and start a session. True on success. */
+function admin_login($user, $password)
+{
+    $users = admin_users();
+    // Verify against a dummy hash for unknown users so timing doesn't reveal which names exist.
+    $hash = isset($users[$user]) ? (string) $users[$user] : '$2y$10$v5pMaWWzC7ZCm7QQfB9hYewwIXD3o8.B4tFqyB5bJsL4xrdmkTKz6';
+    if (!password_verify((string) $password, $hash) || !isset($users[$user])) {
+        sleep(1); // slow down guessing
+        return false;
+    }
+    admin_session_start();
+    session_regenerate_id(true);
+    $_SESSION['user'] = $user;
+    return true;
+}
+
+function admin_logout()
+{
+    admin_session_start();
+    $_SESSION = array();
+    session_destroy();
 }
 
 /**
  * True when a POST came from one of this site's own pages, judged by the Origin
  * header (or Referer when a browser omits Origin). Blocks cross-site form posts
- * riding on an admin's SSO session.
+ * riding on an admin's login.
  */
 function same_origin_request()
 {
@@ -127,11 +216,14 @@ function same_origin_request()
         . (parse_url($src, PHP_URL_PORT) ? ':' . parse_url($src, PHP_URL_PORT) : '')) === $host;
 }
 
-/** Stop with a 403 page unless an SSO user reached the app (which list is .htaccess's job). */
+/** Continue only for a signed-in admin: password mode sends others to the login form, SSO mode 403s. */
 function require_admin()
 {
     if (current_user() !== '') {
         return;
+    }
+    if (auth_mode() === 'password') {
+        redirect('/admin/login');
     }
     http_response_code(403);
     view('auth/denied', array('title' => 'Not authorised'));

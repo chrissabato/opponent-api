@@ -1,10 +1,10 @@
-# Deployed at: athletics.willamette.edu/api/teams/
-# If that URL path ever changes, update BOTH RewriteBase below and
-# 'base_path' in config.php.
+# Copy to .htaccess (git-ignored). Works as-is in any directory under the DocumentRoot.
 
 <IfModule mod_rewrite.c>
     RewriteEngine On
-    RewriteBase /api/teams/
+    # Needed only if this directory is reached through an Alias: set it to the URL path,
+    # e.g. RewriteBase /api/teams/
+    # RewriteBase /
 
     # Block direct access to application internals.
     RewriteRule ^(?:src|bin|database)(?:/|$)          - [F,L]
@@ -19,17 +19,18 @@
     RewriteRule ^ index.php [L]
 </IfModule>
 
-# Admin UI requires a campus SSO (Shibboleth) login; the API, logos and /docs stay public.
-# Matched on THE_REQUEST (the original request line) rather than REQUEST_URI because the
-# rewrite to index.php re-runs access checks with REQUEST_URI = .../index.php.
-# List admins on the Require line, as REMOTE_USER values (space-separated). The app also
-# refuses /admin when no SSO user reaches it, so a URL that slips past this pattern
-# (e.g. a double slash) fails closed. The path below must match RewriteBase.
-<If "%{THE_REQUEST} =~ m#^[A-Z]+ /api/teams/admin[/? ]#">
-    AuthType shibboleth
-    ShibRequestSetting requireSession 1
-    Require shib-user someone@example.edu
-</If>
+# --- Optional: Shibboleth SSO for the admin UI (with 'auth' => 'shibboleth' in config.php) ---
+# Requires mod_shib and a configured Shibboleth SP. Asks for a login on any .../admin URL;
+# the API, logos and /docs stay public. Who gets in is 'shib_admins' in config.php (the app
+# refuses anyone else, and anyone at all if no SSO user reaches it). Matched on THE_REQUEST
+# (the original request line) because the rewrite to index.php re-runs access checks with
+# REQUEST_URI = .../index.php.
+#
+# <If "%{THE_REQUEST} =~ m#^[A-Z]+ [^? ]*/admin(?:[/? ]|$)#">
+#     AuthType shibboleth
+#     ShibRequestSetting requireSession 1
+#     Require shib-session
+# </If>
 
 # Logos are fetched cross-origin by the consumer apps (e.g. drawn onto a <canvas>).
 <IfModule mod_headers.c>

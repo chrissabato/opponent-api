@@ -1,7 +1,7 @@
 <?php
 /** @var array|null $sample  one team row to show as the example response */
 $base = base_url();
-$exampleSlug = $sample ? $sample['slug'] : 'willamette-university';
+$exampleSlug = $sample ? $sample['slug'] : 'example-university';
 // Trailing slash: on Apache {base} is a real directory, and mod_dir's 301 from
 // {base} to {base}/ carries no CORS header, so cross-origin fetch() would fail.
 $list = rtrim(url('/'), '/') . '/';
@@ -13,7 +13,7 @@ $endpoints = array(
 );
 $filters = array(
     array('q', 'Case-insensitive substring of full name, variant, short name, code or mascot.', 'q=lute'),
-    array('slug', 'Comma-separated list of slugs to fetch in one request.', 'slug=' . $exampleSlug . ',whitman-college'),
+    array('slug', 'Comma-separated list of slugs to fetch in one request.', 'slug=' . $exampleSlug . ',another-college'),
     array('conference', 'Exact conference name (case-insensitive).', 'conference=NWC'),
     array('variant', 'For schools with several entries (e.g. Men / Women), return that variant; schools without it return their plain entry. Case-insensitive.', 'variant=women'),
     array('updated_since', 'Only teams changed at or after this time (ISO 8601, UTC). For incremental syncs.', 'updated_since=2026-10-01T00:00:00Z'),

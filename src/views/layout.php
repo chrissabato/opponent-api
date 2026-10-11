@@ -18,8 +18,11 @@
     <?php if (current_user() !== ''): ?>
       <span class="ml-auto text-xs text-slate-400">
         <?= e(current_user()) ?>
-        <?php if (PHP_SAPI !== 'cli-server'): ?>
+        <?php if (PHP_SAPI === 'cli-server' && !empty(config()['dev_user'])): ?>
+        <?php elseif (auth_mode() === 'shibboleth'): ?>
           &middot; <a class="hover:text-white" href="/Shibboleth.sso/Logout?return=<?= rawurlencode(base_url() . '/docs') ?>">Log out</a>
+        <?php else: ?>
+          &middot; <form method="post" action="<?= url('/admin/logout') ?>" class="inline"><button class="hover:text-white">Log out</button></form>
         <?php endif ?>
       </span>
     <?php endif ?>

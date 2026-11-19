@@ -9,7 +9,7 @@ $endpoints = array(
     array($list, 'All teams as JSON: { "count": n, "teams": [ ... ] }, sorted by full name.'),
     array(url('/{slug}'), 'One team by slug (preferred) or numeric id. 404 JSON when missing.'),
     array(url('/export.csv'), 'All teams as a flat CSV (same filters). Good for spreadsheets and vMix data sources.'),
-    array(url('/{slug}/logo.png'), 'The team&rsquo;s logo centred on a square of its primary colour (PNG, default 500&times;500; <code>?size=16&ndash;1000</code>). 404 without a logo file or primary colour. Already linked from logo.on_primary_url.'),
+    array(url('/{slug}/logo.png'), 'The team&rsquo;s logo centred on a square of its primary colour (PNG, default 500&times;500; <code>?size=16&ndash;1000</code>, <code>&amp;radius=0&ndash;50</code> % for rounded corners). 404 without a logo file or primary colour. Already linked from logo.on_primary_url.'),
     array(url('/bg/{hex}.png'), 'A 64&times;64 solid-colour PNG, e.g. ' . e(url('/bg/791716.png')) . '. Already linked from logo.bg_url.'),
 );
 $filters = array(
@@ -95,6 +95,8 @@ $pre = 'mt-2 rounded bg-slate-900 text-slate-100 text-xs p-3 overflow-x-auto';
     </p>
     <ul class="mt-2 text-sm text-slate-600 list-disc pl-5 space-y-1">
       <li><code>?size=N</code> sets the side in pixels, 16&ndash;1000 (default 500). Anything else is a <code>400</code>.</li>
+      <li><code>?radius=P</code> rounds the corners to P% of the side, 0&ndash;50 (default 0 = square, 50 = circle);
+        the corners are transparent. At high values the corners of a square logo can be clipped.</li>
       <li><code>404</code> (JSON error) when the team doesn&rsquo;t exist or has no logo file or no primary colour &mdash;
         in which case <code>logo.on_primary_url</code> is <code>null</code>, so check that first.</li>
       <li>Small source logos are scaled up and may look soft at large sizes.</li>
@@ -105,6 +107,7 @@ $pre = 'mt-2 rounded bg-slate-900 text-slate-100 text-xs p-3 overflow-x-auto';
       <div class="mt-3 flex items-end gap-4">
         <img src="<?= e($tile . '?size=128') ?>" width="128" height="128" alt="" class="rounded border">
         <img src="<?= e($tile . '?size=64') ?>" width="64" height="64" alt="" class="rounded border">
+        <img src="<?= e($tile . '?size=128&radius=20') ?>" width="128" height="128" alt="">
         <a class="font-mono text-xs text-blue-600 hover:underline" href="<?= e($tile . '?size=128') ?>"><?= e($tile . '?size=128') ?></a>
       </div>
     <?php endif ?>

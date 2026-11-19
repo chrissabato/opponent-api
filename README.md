@@ -67,7 +67,7 @@ Paths are relative to wherever the app is installed (`/api/teams` here).
 |-------------------------------|------------------------------------------------------|
 | `/api/teams/`                 | All teams (JSON). Filters: `q`, `slug`, `conference`, `variant`, `updated_since` |
 | `/api/teams/{slug\|id}`        | One team (JSON)                                      |
-| `/api/teams/{slug\|id}/logo.png` | Logo centred on the primary colour (PNG, `?size=16`–`1000`, default 500; needs GD) |
+| `/api/teams/{slug\|id}/logo.png` | Logo centred on the primary colour (PNG, `?size=16`–`1000`, default 500; `radius=0`–`50` % rounds corners; needs GD) |
 | `/api/teams/export.csv`       | All teams, flat CSV (same filters)                   |
 | `/api/teams/bg/{hex}.png`     | 64×64 solid-colour PNG                               |
 | `/api/teams/logos/{file}`     | Logo images (file name is case-insensitive)          |

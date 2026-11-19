@@ -257,8 +257,9 @@ function solid_color_png($hex, $size = 64)
 }
 
 /**
- * GET /{slug|id}/logo.png[?size=N]: the team's logo centred on a square of its primary
- * colour, scaled to fit 80% of the side (small logos are scaled up). Needs GD.
+ * GET /{slug|id}/logo.png[?size=N][&radius=P]: the team's logo centred on a square of its
+ * primary colour, scaled to fit 80% of the side (small logos are scaled up), with corners
+ * rounded to P% of the side (0-50, default 0; 50 = circle). Needs GD.
  */
 function send_team_logo_png($key)
 {
@@ -275,6 +276,15 @@ function send_team_logo_png($key)
     } else {
         $size = (int) $size;
     }
+    $radius = param('radius');
+    if ($radius === '') {
+        $radius = 0;
+    } elseif (!preg_match('/^\d{1,2}$/', $radius) || (int) $radius > 50) {
+        api_error(400, 'radius must be a whole-number percentage of the size from 0 to 50.');
+        return;
+    } else {
+        $radius = (int) $radius;
+    }
     $t = team_find_by_key($key);
     if (!$t) {
         api_error(404, 'Team not found.');
@@ -290,7 +300,7 @@ function send_team_logo_png($key)
         api_error(404, 'This team has no primary colour.');
         return;
     }
-    $png = logo_on_color_png(APP_ROOT . '/logos/' . $real, $hex, $size);
+    $png = logo_on_color_png(APP_ROOT . '/logos/' . $real, $hex, $size, $size * $radius / 100);
     if ($png === null) {
         api_error(500, 'The logo file could not be read as an image.');
         return;
@@ -298,8 +308,11 @@ function send_team_logo_png($key)
     api_send($png, 'image/png');
 }
 
-/** PNG bytes: $file's image fitted into 80% of a $size square of colour $hex. null if unreadable. */
-function logo_on_color_png($file, $hex, $size)
+/**
+ * PNG bytes: $file's image fitted into 80% of a $size square of colour $hex, corners
+ * rounded to $radius px (transparent outside). null if unreadable.
+ */
+function logo_on_color_png($file, $hex, $size, $radius = 0)
 {
     $data = @file_get_contents($file);
     $src = $data === false ? false : @imagecreatefromstring($data);
@@ -321,8 +334,54 @@ function logo_on_color_png($file, $hex, $size)
     imagefilledrectangle($dst, 0, 0, $size - 1, $size - 1, $bg);
     imagealphablending($dst, true); // blend the logo's transparency over the colour
     imagecopyresampled($dst, $src, (int) (($size - $dw) / 2), (int) (($size - $dh) / 2), 0, 0, $dw, $dh, $w, $h);
+    if ($radius > 0) {
+        round_image_corners($dst, $radius);
+    }
 
     ob_start();
     imagepng($dst, null, 6);
     return ob_get_clean();
+}
+
+/**
+ * Make the corners of square truecolor image $im transparent outside a $r px radius,
+ * antialiasing the edge pixels by their distance from the arc. Works one row of each
+ * corner at a time: the fully-outside run is one fill, only the pixels on the arc
+ * are touched individually.
+ */
+function round_image_corners($im, $r)
+{
+    $n = imagesx($im);
+    $r = min((float) $r, $n / 2);
+    imagealphablending($im, false);
+    imagesavealpha($im, true);
+    $clear = imagecolorallocatealpha($im, 0, 0, 0, 127);
+    $rows = (int) ceil($r);
+    for ($y = 0; $y < $rows; $y++) {
+        $dy = $r - ($y + 0.5); // pixel centre to arc centre, vertically
+        // Pixels whose centre is >= r+0.5 from the arc centre are fully outside, <= r-0.5 fully
+        // inside; only the band between needs blending.
+        $out = ($r + 0.5) * ($r + 0.5) - $dy * $dy;
+        $in = ($r - 0.5) * ($r - 0.5) - $dy * $dy;
+        $from = $out <= 0 ? 0 : min($rows, max(0, (int) floor($r - sqrt($out) - 0.5) + 1));
+        $to = min($rows - 1, (int) ceil($r - ($in > 0 ? sqrt($in) : 0.0)));
+        foreach (array($y, $n - 1 - $y) as $py) {
+            if ($from > 0) {
+                imagefilledrectangle($im, 0, $py, $from - 1, $py, $clear);
+                imagefilledrectangle($im, $n - $from, $py, $n - 1, $py, $clear);
+            }
+            for ($x = $from; $x <= $to; $x++) {
+                $dx = $r - ($x + 0.5);
+                $cover = max(0.0, min(1.0, $r - sqrt($dx * $dx + $dy * $dy) + 0.5));
+                if ($dx <= 0 || $cover >= 1.0) {
+                    continue;
+                }
+                foreach (array($x, $n - 1 - $x) as $px) {
+                    $c = imagecolorat($im, $px, $py);
+                    $a = 127 - (int) round((127 - (($c >> 24) & 0x7F)) * $cover);
+                    imagesetpixel($im, $px, $py, ($a << 24) | ($c & 0xFFFFFF));
+                }
+            }
+        }
+    }
 }

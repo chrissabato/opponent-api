@@ -33,9 +33,9 @@ to logo images.
 
 `base_path()` is `config['base_path']` when set, else `dirname(SCRIPT_NAME)` under a web
 server, else `''` (`php -S`, CLI). Behind an Alias, set both `base_path` and `RewriteBase`.
-Our local `config.php` sets `base_path` = `/api/teams` to mirror production; the `cli-server`
-block in `index.php` serves `/logos/` itself because the built-in server can't map
-base_path-prefixed URLs to files.
+Our local `config.php` sets `base_path` = `/api/teams` to mirror production; the
+`/logos/` route in `index.php` also covers `php -S`, which can't map base_path-prefixed URLs
+to files.
 
 ## Architecture
 
@@ -74,7 +74,9 @@ Plain PHP, no framework, PHP 7.2 baseline: no typed properties, arrow functions,
 - `updated_at` is UTC (`CURRENT_TIMESTAMP`), bumped on every save; exposed as ISO 8601 `Z`.
   Deletes are hard deletes, so `updated_since` syncs don't see them.
 - `logo.url` is `null` when the file isn't in `/logos/` (lookup is case-insensitive because
-  the logo pack is authored on Windows). `/logos/` is git-ignored and deployed per server.
+  the logo pack is authored on Windows). `/logos/{file}` URLs are case-insensitive too: Apache
+  serves exact matches, other casings fall through to `send_logo_file()`. An upload replaces
+  any same-name-different-case file. `/logos/` is git-ignored and deployed per server.
 - `PDOException` extends `RuntimeException` — catch it first.
 
 ## Admin auth

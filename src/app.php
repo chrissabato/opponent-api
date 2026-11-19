@@ -275,6 +275,33 @@ function logo_real_name($filename)
     return isset($map[$lc]) ? $map[$lc] : '';
 }
 
+/**
+ * Serve /logos/{name}, matching the file name case-insensitively. 404 when absent.
+ * Sends the CORS header the .htaccess rule gives exact-case requests.
+ */
+function send_logo_file($name)
+{
+    header('Access-Control-Allow-Origin: *');
+    $real = '';
+    if ($name !== '' && $name[0] !== '.' && strpbrk($name, "/\\\0") === false) {
+        $real = logo_real_name($name);
+    }
+    if ($real === '') {
+        http_response_code(404);
+        header('Content-Type: text/plain; charset=utf-8');
+        echo "Logo not found.\n";
+        return;
+    }
+    $file = APP_ROOT . '/logos/' . $real;
+    $mime = function_exists('mime_content_type') ? mime_content_type($file) : false;
+    header('Content-Type: ' . ($mime ? $mime : 'application/octet-stream'));
+    header('Content-Length: ' . filesize($file));
+    header('Last-Modified: ' . gmdate('D, d M Y H:i:s', filemtime($file)) . ' GMT');
+    if ($_SERVER['REQUEST_METHOD'] !== 'HEAD') {
+        readfile($file);
+    }
+}
+
 /** base_path-relative URL for an uploaded logo, or '' when the file isn't there. */
 function logo_asset_url($filename)
 {
@@ -328,6 +355,12 @@ function logo_upload_save($file, $preferred = '')
     }
     if (!@move_uploaded_file($file['tmp_name'], $dir . '/' . $name)) {
         throw new RuntimeException('Could not write the logo into /logos/ (directory permissions?).');
+    }
+    // Names are case-insensitive: the upload replaces any Foo.PNG / foo.png twin.
+    foreach (scandir($dir) as $f) {
+        if ($f !== $name && strtolower($f) === strtolower($name) && is_file($dir . '/' . $f)) {
+            @unlink($dir . '/' . $f);
+        }
     }
     return $name;
 }

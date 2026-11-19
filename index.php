@@ -26,16 +26,12 @@ set_exception_handler(function ($ex) {
     echo 'Server error: ' . $msg . "\n";
 });
 
-// Local dev: serve real files (logos) ourselves. The built-in server can't do it via
-// `return false` because the URL carries base_path, which isn't a directory on disk.
-if (PHP_SAPI === 'cli-server') {
-    $file = realpath(__DIR__ . rawurldecode(request_path()));
-    if ($file !== false && strpos($file, __DIR__ . '/logos/') === 0 && is_file($file)) {
-        header('Content-Type: ' . mime_content_type($file));
-        header('Access-Control-Allow-Origin: *'); // mirrors the .htaccess header rule
-        readfile($file);
-        exit;
-    }
+// Logo files. Apache serves exact-case matches itself (.htaccess); anything else lands
+// here, so /logos/Foo.PNG finds foo.png (the logo pack is authored on Windows). Also
+// covers `php -S`, which can't map base_path-prefixed URLs to files.
+if (preg_match('#^/logos/([^/]+)$#', request_path(), $m)) {
+    send_logo_file(rawurldecode($m[1]));
+    exit;
 }
 
 if (!is_file(config()['db_path'])) {

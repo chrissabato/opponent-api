@@ -69,7 +69,7 @@ Paths are relative to wherever the app is installed (`/api/teams` here).
 | `/api/teams/{slug\|id}`        | One team (JSON)                                      |
 | `/api/teams/export.csv`       | All teams, flat CSV (same filters)                   |
 | `/api/teams/bg/{hex}.png`     | 64×64 solid-colour PNG                               |
-| `/api/teams/logos/{file}`     | Logo images                                          |
+| `/api/teams/logos/{file}`     | Logo images (file name is case-insensitive)          |
 
 Use the trailing slash on the list URL: Apache 301s `/api/teams` → `/api/teams/` and that
 redirect has no CORS header, so a cross-origin `fetch()` of the slashless form fails.

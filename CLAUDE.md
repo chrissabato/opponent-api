@@ -43,8 +43,8 @@ Plain PHP, no framework, PHP 7.2 baseline: no typed properties, arrow functions,
 `match`, `str_contains`. SQLite via PDO; avoid UPSERT (SQLite bundled with 7.2 predates it).
 
 - `index.php` — front controller; flat list of route checks each ending in `exit`.
-  The API lives at the root of base_path: `/` (list), `/{slug|id}`, `/export.csv`,
-  `/bg/{hex}.png`. The admin UI is `/admin`, `/admin/new`, `/admin/{id}/edit`, and POSTs to
+  The API lives at the root of base_path: `/` (list), `/{slug|id}`, `/{slug|id}/logo.png`
+  (logo on primary colour; the only GD-dependent route), `/export.csv`, `/bg/{hex}.png`. The admin UI is `/admin`, `/admin/new`, `/admin/{id}/edit`, and POSTs to
   `/admin[/{id}][/delete]`; docs at `/docs`. Admin/docs routes are matched first; anything
   else falls through to the API, which sets CORS headers, answers `OPTIONS` with 204 and
   rejects non-GET with 405.

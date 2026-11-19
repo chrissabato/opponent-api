@@ -36,6 +36,9 @@ function team_resource(array $t)
             // null when the file hasn't been uploaded to /logos/ on this server
             'url'      => $real !== '' ? base_url() . '/logos/' . rawurlencode($real) : null,
             'bg_url'   => $bg !== '' ? base_url() . '/bg/' . $bg . '.png' : null,
+            // logo centred on a square of the primary colour; null without a logo file or primary colour
+            'on_primary_url' => $real !== '' && $t['primary_color'] !== ''
+                ? base_url() . '/' . rawurlencode($t['slug']) . '/logo.png' : null,
         ),
         'stats'      => array(
             'id'       => $t['stat_id'],
@@ -50,7 +53,7 @@ function team_csv_columns()
     return array(
         'id', 'slug', 'full_name', 'variant', 'short_name', 'code', 'mascot', 'location', 'conference', 'website', 'website_provider',
         'primary_color', 'secondary_color', 'logo_bg_hex', 'logo_filename', 'logo_url', 'logo_bg_url',
-        'stat_id', 'updated_at',
+        'stat_id', 'updated_at', 'logo_on_primary_url',
     );
 }
 
@@ -214,6 +217,7 @@ function send_teams_csv()
         $r = team_resource($t);
         $t['logo_url'] = $r['logo']['url'];
         $t['logo_bg_url'] = $r['logo']['bg_url'];
+        $t['logo_on_primary_url'] = $r['logo']['on_primary_url'];
         $t['updated_at'] = $r['updated_at'];
         $line = array();
         foreach ($cols as $c) {
@@ -250,4 +254,75 @@ function solid_color_png($hex, $size = 64)
         . png_chunk('IHDR', $ihdr)
         . png_chunk('IDAT', $idat)
         . png_chunk('IEND', '');
+}
+
+/**
+ * GET /{slug|id}/logo.png[?size=N]: the team's logo centred on a square of its primary
+ * colour, scaled to fit 80% of the side (small logos are scaled up). Needs GD.
+ */
+function send_team_logo_png($key)
+{
+    if (!function_exists('imagecreatefromstring')) {
+        api_error(501, 'Logo rendering needs the PHP GD extension, which this server lacks.');
+        return;
+    }
+    $size = param('size');
+    if ($size === '') {
+        $size = 500;
+    } elseif (!preg_match('/^\d{1,4}$/', $size) || (int) $size < 16 || (int) $size > 1000) {
+        api_error(400, 'size must be a whole number of pixels from 16 to 1000.');
+        return;
+    } else {
+        $size = (int) $size;
+    }
+    $t = team_find_by_key($key);
+    if (!$t) {
+        api_error(404, 'Team not found.');
+        return;
+    }
+    $real = logo_real_name($t['logo_filename']);
+    if ($real === '') {
+        api_error(404, 'This team has no logo file.');
+        return;
+    }
+    $hex = ltrim($t['primary_color'], '#');
+    if ($hex === '') {
+        api_error(404, 'This team has no primary colour.');
+        return;
+    }
+    $png = logo_on_color_png(APP_ROOT . '/logos/' . $real, $hex, $size);
+    if ($png === null) {
+        api_error(500, 'The logo file could not be read as an image.');
+        return;
+    }
+    api_send($png, 'image/png');
+}
+
+/** PNG bytes: $file's image fitted into 80% of a $size square of colour $hex. null if unreadable. */
+function logo_on_color_png($file, $hex, $size)
+{
+    $data = @file_get_contents($file);
+    $src = $data === false ? false : @imagecreatefromstring($data);
+    if (!$src) {
+        return null;
+    }
+    if (!imageistruecolor($src)) {
+        imagepalettetotruecolor($src); // so palette PNG/GIF transparency resamples cleanly
+    }
+    $w = imagesx($src);
+    $h = imagesy($src);
+    $box = $size * 0.8;
+    $scale = min($box / $w, $box / $h);
+    $dw = max(1, (int) round($w * $scale));
+    $dh = max(1, (int) round($h * $scale));
+
+    $dst = imagecreatetruecolor($size, $size);
+    $bg = imagecolorallocate($dst, hexdec(substr($hex, 0, 2)), hexdec(substr($hex, 2, 2)), hexdec(substr($hex, 4, 2)));
+    imagefilledrectangle($dst, 0, 0, $size - 1, $size - 1, $bg);
+    imagealphablending($dst, true); // blend the logo's transparency over the colour
+    imagecopyresampled($dst, $src, (int) (($size - $dw) / 2), (int) (($size - $dh) / 2), 0, 0, $dw, $dh, $w, $h);
+
+    ob_start();
+    imagepng($dst, null, 6);
+    return ob_get_clean();
 }

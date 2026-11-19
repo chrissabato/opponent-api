@@ -174,6 +174,9 @@ if (preg_match('#^/bg/([0-9A-Fa-f]{6})\.png$#', $path, $m)) {
     exit;
 }
 
+/* A team's logo on its primary colour, as a PNG. */
+if (preg_match('#^/([A-Za-z0-9-]+)/logo\.png$#', $path, $m)) { send_team_logo_png($m[1]); exit; }
+
 /* One team by slug or id. Reserved words (admin, docs, ...) never match a slug. */
 if (preg_match('#^/([A-Za-z0-9-]+)(?:\.json)?$#', $path, $m)) { send_team_json($m[1]); exit; }
 

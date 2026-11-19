@@ -9,6 +9,7 @@ $endpoints = array(
     array($list, 'All teams as JSON: { "count": n, "teams": [ ... ] }, sorted by full name.'),
     array(url('/{slug}'), 'One team by slug (preferred) or numeric id. 404 JSON when missing.'),
     array(url('/export.csv'), 'All teams as a flat CSV (same filters). Good for spreadsheets and vMix data sources.'),
+    array(url('/{slug}/logo.png'), 'The team&rsquo;s logo centred on a square of its primary colour (PNG, default 500&times;500; <code>?size=16&ndash;1000</code>). 404 without a logo file or primary colour. Already linked from logo.on_primary_url.'),
     array(url('/bg/{hex}.png'), 'A 64&times;64 solid-colour PNG, e.g. ' . e(url('/bg/791716.png')) . '. Already linked from logo.bg_url.'),
 );
 $filters = array(
@@ -76,7 +77,8 @@ $pre = 'mt-2 rounded bg-slate-900 text-slate-100 text-xs p-3 overflow-x-auto';
       Unset text fields are <code>""</code>.
       <code>variant</code> is <code>""</code> unless the school has several entries (e.g. <code>"Men"</code> / <code>"Women"</code>) &mdash; show it alongside <code>full_name</code> where it matters. Colours are <code>"#RRGGBB"</code> or <code>""</code>.
       <code>logo.url</code> is <code>null</code> when no logo file has been uploaded;
-      <code>logo.bg_url</code> is <code>null</code> when no logo BG colour is set.
+      <code>logo.bg_url</code> is <code>null</code> when no logo BG colour is set;
+      <code>logo.on_primary_url</code> is <code>null</code> without both a logo file and a primary colour.
       New fields may be added over time; existing ones won&rsquo;t be renamed or removed.
     </p>
     <pre class="<?= $pre ?>"><?= e($sample

@@ -87,6 +87,33 @@ $pre = 'mt-2 rounded bg-slate-900 text-slate-100 text-xs p-3 overflow-x-auto';
   </section>
 
   <section class="bg-white rounded-lg shadow-sm p-5">
+    <h2 class="font-semibold">Logo on primary colour</h2>
+    <p class="mt-1 text-sm text-slate-600">
+      <code class="font-mono"><?= e(url('/{slug}/logo.png')) ?></code> returns a square PNG of the team&rsquo;s logo,
+      scaled to fit 80% of the side and centred on its primary colour (transparent parts of the logo show the colour).
+      Use it where you want a ready-made tile instead of compositing the logo yourself.
+    </p>
+    <ul class="mt-2 text-sm text-slate-600 list-disc pl-5 space-y-1">
+      <li><code>?size=N</code> sets the side in pixels, 16&ndash;1000 (default 500). Anything else is a <code>400</code>.</li>
+      <li><code>404</code> (JSON error) when the team doesn&rsquo;t exist or has no logo file or no primary colour &mdash;
+        in which case <code>logo.on_primary_url</code> is <code>null</code>, so check that first.</li>
+      <li>Small source logos are scaled up and may look soft at large sizes.</li>
+      <li>Same caching as the JSON endpoints (<code>ETag</code>, <code>max-age=60</code>) and CORS-enabled, so it can be drawn onto a <code>&lt;canvas&gt;</code>.</li>
+    </ul>
+    <?php $tile = $sample ? team_resource($sample)['logo']['on_primary_url'] : null; ?>
+    <?php if ($tile): ?>
+      <div class="mt-3 flex items-end gap-4">
+        <img src="<?= e($tile . '?size=128') ?>" width="128" height="128" alt="" class="rounded border">
+        <img src="<?= e($tile . '?size=64') ?>" width="64" height="64" alt="" class="rounded border">
+        <a class="font-mono text-xs text-blue-600 hover:underline" href="<?= e($tile . '?size=128') ?>"><?= e($tile . '?size=128') ?></a>
+      </div>
+    <?php endif ?>
+    <pre class="<?= $pre ?>"><?= e("// <img> tile for a team, falling back to the plain logo
+img.src = team.logo.on_primary_url ? `\${team.logo.on_primary_url}?size=128`
+                                   : (team.logo.url ?? '/img/placeholder.png');") ?></pre>
+  </section>
+
+  <section class="bg-white rounded-lg shadow-sm p-5">
     <h2 class="font-semibold">Example (JavaScript)</h2>
     <pre class="<?= $pre ?>"><?= e("const API = '$base';
 
